@@ -5,19 +5,21 @@
 
 #include "mdmatrix.h"
 
-
-int main() {
+consteval MDMatrix<int, 3, 3, 3> GetEmptyMatrix() {
     MDMatrix<int, 3, 3, 3> matrix;
-    assert(matrix.begin() == matrix.begin());
     for (auto &i : matrix) {
         for (auto &j : i) {
             for (auto &l : j) {
-                l = 2;
+                l = 0;
             }
         }
     }
-    matrix *= 52;
-//    matrix -= matrix;
+    return matrix;
+}
+
+int main() {
+    static constinit MDMatrix<int, 3, 3, 3> matrix = GetEmptyMatrix();
+    matrix += matrix;
     std::cout << matrix[1][2][0] << std::endl;
     return 0;
 }
