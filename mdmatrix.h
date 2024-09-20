@@ -25,6 +25,12 @@ template<typename T, size_t... DimsSize>
 class MDMatrixConstView;
 
 template<typename T, size_t... DimsSize>
+class MDMatrixConstViewIterator;
+
+template<typename T, size_t... DimsSize>
+class MDMatrixViewIterator;
+
+template<typename T, size_t... DimsSize>
 class MDMatrix {
  public:
     operator MDMatrixView<T, DimsSize...>() {
@@ -66,6 +72,14 @@ class MDMatrix {
         return *this;
     }
 
+    decltype(auto) begin() {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return data_.begin();
+        } else {
+            return MDMatrixConstViewIterator<T, DimsSize...>(data_.begin());
+        }
+    }
+
  private:
     impl::ImplArr<T, DimsSize...>::value data_;
 };
@@ -88,6 +102,7 @@ class MDMatrixView {
             }(std::index_sequence<DimsSize...>{});
         }
     }
+
     decltype(auto) operator[](size_t ind) const  {
         if constexpr (sizeof...(DimsSize) == 1) {
             return data[ind];
@@ -127,8 +142,50 @@ class MDMatrixView {
         }
         return *this;
     }
+
  private:
     impl::ImplArr<T, DimsSize...>::value &data;
+};
+
+template<typename T, size_t... DimsSize>
+class MDMatrixConstViewIterator {
+ public:
+    MDMatrixConstViewIterator(impl::ImplArr<T, DimsSize...>::value::iterator data) : data(data) {}
+
+    decltype(auto) operator*() const {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return *data;
+        } else {
+            return [&]<size_t First, size_t... Other>(std::index_sequence<First, Other...>) {
+                return MDMatrixConstViewIterator<T, Other...>(*data);
+            }(std::index_sequence<DimsSize...>{});
+        }
+    }
+
+    decltype(auto) operator*()  {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return *data;
+        } else {
+            return [&]<size_t First, size_t... Other>(std::index_sequence<First, Other...>) {
+                return MDMatrixConstView<T, Other...>(*data);
+            }(std::index_sequence<DimsSize...>{});
+        }
+    }
+
+    decltype(auto) operator->() const {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return data.base();
+        } else {
+            return [&]<size_t First, size_t... Other>(std::index_sequence<First, Other...>) {
+                return MDMatrixConstView<T, Other...>(*data);
+            }(std::index_sequence<DimsSize...>{});
+        }
+    }
+
+    auto operator<=>(const MDMatrixConstViewIterator &rhs) const = default;
+
+ private:
+    impl::ImplArr<T, DimsSize...>::value::const_iterator data;
 };
 
 template<typename T, size_t... DimsSize>
@@ -144,6 +201,24 @@ class MDMatrixConstView {
             }(std::index_sequence<DimsSize...>{});
         }
     }
+
+
+    auto begin() const {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return data.begin();
+        } else {
+            return MDMatrixConstViewIterator<T, DimsSize...>(data.begin());
+        }
+    }
+
+    auto end() const {
+        if constexpr (sizeof...(DimsSize) == 1) {
+            return data.end();
+        } else {
+            return MDMatrixConstViewIterator<T, DimsSize...>(data.end());
+        }
+    }
+
  private:
     const impl::ImplArr<T, DimsSize...>::value &data;
 };
